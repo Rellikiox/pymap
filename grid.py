@@ -1,61 +1,6 @@
 
 import random
-import math
-
-
-class Point:
-	def __init__(self, x, y):
-		self.x = x
-		self.y = y
-
-	def scaled(self, scale):
-		return Point(self.x * scale, self.y * scale)
-
-	def int(self):
-		return Point(int(self.x), int(self.y))
-
-	def tuple(self):
-		return (self.x, self.y)
-
-	def to_pygame(self, scale):
-		return self.scaled(512).int().tuple()
-		
-	def dot_product(self, other_point):
-		return self.x * other_point.x + self.y * other_point.y
-		
-	def magnitude(self):
-		return math.sqrt(self.x ** 2 + self.y ** 2)
-
-	@staticmethod
-	def in_circumdisk(point_a, point_b, other_point):
-		circumdisk_centre = (point_b + point_a) / 2 
-		circumdisk_radius = (circumdisk_centre - point_a).magnitude()
-		return (other_point - circumdisk_centre).magnitude() < circumdisk_radius
-
-	def __add__(self, other_point):
-		return Point(self.x + other_point.x, self.y + other_point.y)
-
-	def __sub__(self, other_point):
-		return Point(self.x - other_point.x, self.y - other_point.y)
-
-	def __truediv__(self, value):
-		return Point(self.x / value, self.y / value)
-
-	def __mul__(self, value):
-		return Point(self.x * value, self.y * value)
-
-	def __get__(self, index):
-		if index == 0:
-			return self.x
-		if index == 1:
-			return self.y
-		raise IndexError()
-
-	def __repr__(self):
-		return '<{},{}>'.format(self.x, self.y)
-
-	def __str__(self):
-		return '<{},{}>'.format(self.x, self.y)
+from geometry import Point
 
 
 def get_grid(width, height):
@@ -64,7 +9,6 @@ def get_grid(width, height):
 		for j in range(height)
 		for i in range(width)
 	]
-
 
 
 def get_fuzzy_grid(width, height):
@@ -78,8 +22,9 @@ def get_fuzzy_grid(width, height):
 		for i in range(width)
 	]
 	for point in grid:
-		point.x += (random.random() * 2 - 1) * max_x_random_offset
-		point.y += (random.random() * 2 - 1) * max_y_random_offset
+		if point.x != 0 and point.y != 0 and point.x != 1 and point.y != 1:
+			point.x += (random.random() * 2 - 1) * max_x_random_offset
+			point.y += (random.random() * 2 - 1) * max_y_random_offset
 
 	min_x = min(point.x for point in grid)
 	max_x = max(point.x for point in grid)

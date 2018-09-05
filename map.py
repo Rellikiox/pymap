@@ -24,17 +24,17 @@ def main():
 
 
 def draw(screen):
-	points = grid.get_fuzzy_grid(3, 3)
+	points = grid.get_fuzzy_grid(32, 32)
 	triangulation = delaunay.triangulate(points)
 	for triangle in triangulation:
-		pygame.draw.circle(screen, DARK_GREEN, triangle.centre().to_pygame(512), int((triangle.centre() - triangle.a).scaled(512).magnitude()), 1)
-		pygame.draw.circle(screen, DARK_GREEN, triangle.centre().to_pygame(512), 2)
-		for neighbour in triangle.neighbours():
-			pygame.draw.line(screen, DARKISH_GREEN, triangle.incentre().to_pygame(512), neighbour.incentre().to_pygame(512), 1)
+		# pygame.draw.circle(screen, DARK_GREEN, triangle.centre().to_pygame(512), int((triangle.centre() - triangle.a).scaled(512).magnitude()), 1)
+		# pygame.draw.circle(screen, DARK_GREEN, triangle.incentre().to_pygame(512), 1)
+		# for neighbour in triangle.neighbours():
+		# 	pygame.draw.line(screen, DARKISH_GREEN, triangle.centre().to_pygame(512), neighbour.centre().to_pygame(512), 1)
 
-		# pygame.draw.polygon(screen, DARK_BLUE, [point.to_pygame(512) for point in triangle.vertices()], 2)
-	# for point in points:
-	# 	pygame.draw.circle(screen, DARK_BLUE, point.to_pygame(512), 2)
+		pygame.draw.polygon(screen, DARK_BLUE, [point.to_pygame(512) for point in triangle.vertices()], 2)
+	for point in points:
+		pygame.draw.circle(screen, DARK_BLUE, point.to_pygame(512), 1)
 
 	return screen
 
@@ -51,7 +51,7 @@ def setup_and_get_screen():
 def save_image(screen):
 	pygame.display.update()
 	timestamp = datetime.datetime.now().strftime('%Y.%m.%dT%H.%M.%S')
-	filename = '{}.png'.format(timestamp)
+	filename = 'screenshots/{}.png'.format(timestamp)
 	pygame.image.save(screen, filename)
 
 if __name__ == "__main__":
