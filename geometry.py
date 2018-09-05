@@ -17,7 +17,7 @@ class Point:
 		return (self.x, self.y)
 
 	def to_pygame(self, scale):
-		return self.scaled(512).int().tuple()
+		return self.scaled(scale).int().tuple()
 		
 	def dot_product(self, other_point):
 		return self.x * other_point.x + self.y * other_point.y
@@ -111,3 +111,14 @@ class Triangle:
 
 	def __repr__(self):
 		return '#{},{},{}#'.format(self.a, self.b, self.c)
+
+
+class Region:
+	def __init__(self, points):
+		self.points = points
+
+	def centre(self):
+		centre = Point(0, 0)
+		for point in self.points:
+			centre += point
+		return centre / len(self.points)

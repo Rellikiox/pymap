@@ -1,11 +1,25 @@
 
 from operator import attrgetter
 from grid import Point
-from scipy.spatial import Delaunay
-from geometry import Triangle, Point
+from scipy.spatial import Delaunay, Voronoi
+from geometry import Triangle, Point, Region
 
 
-def triangulate(points):
+def voronoi(points):
+	voronoi = Voronoi([p.tuple() for p in points])
+
+	regions =  [
+		Region([Point(*voronoi.vertices[index]) for index in region])
+		for region in voronoi.regions if len(region) >= 1 and -1 not in region
+	]
+	ridges = [
+		(Point(*voronoi.vertices[ridge[0]]), Point(*voronoi.vertices[ridge[1]]))
+		for ridge in voronoi.ridge_vertices if -1 not in ridge
+	]
+	return regions, ridges
+
+
+def delaunay(points):
 	delaunay = Delaunay([p.tuple() for p in points])
 
 	triangles = [

@@ -22,9 +22,10 @@ def get_fuzzy_grid(width, height):
 		for i in range(width)
 	]
 	for point in grid:
-		if point.x != 0 and point.y != 0 and point.x != 1 and point.y != 1:
-			point.x += (random.random() * 2 - 1) * max_x_random_offset
-			point.y += (random.random() * 2 - 1) * max_y_random_offset
+		if point_on_edge(point):
+			continue
+		point.x += (random.random() * 2 - 1) * max_x_random_offset
+		point.y += (random.random() * 2 - 1) * max_y_random_offset
 
 	min_x = min(point.x for point in grid)
 	max_x = max(point.x for point in grid)
@@ -38,3 +39,7 @@ def get_fuzzy_grid(width, height):
 		point.y = (point.y - min_y) / y_scale
 
 	return grid
+
+
+def point_on_edge(point):
+	return point.x == 0 or point.x == 1 or point.y == 0 or point.y == 1
