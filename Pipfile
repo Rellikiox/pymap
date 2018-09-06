@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 pygame = "*"
 scipy = "*"
+noise = "*"
 
 [dev-packages]
 
