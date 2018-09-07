@@ -1,37 +1,36 @@
 
-import datetime
-import os
-
-import delaunay
-import grid
+from functools import partial
+import colors
+import map_primitives
+import noise
+import point_grid
 import pygame.display
 import pygame.draw
 import pygame.transform
-
-
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-DARK_BLUE = (0, 0, 128)
-DARK_GREEN = (0, 64, 0)
-DARKISH_GREEN = (0, 128, 0)
-DARK_GREY = (128, 128, 128)
-OCEAN_BLUE = (175, 214, 254)
-GRASS_GREEN = (189, 237, 174)
-MOUNTAIN_BROWN = (58, 48, 40)
-MAP_SCALE = 900
+import voronoi
+import random
 
 
 class Map:
+    def __init__(self, seed):
+        print('Using seed:', seed)
+        random.seed(seed)
+        rand_z = random.random()
+        self.noise_fn = partial(noise.pnoise3, z=rand_z, octaves=5)
 
-    def draw(self, screen):
-        points = grid.get_fuzzy_grid(64, 64)
-        regions, ridges = delaunay.voronoi(points)
-        cells = [Cell(region) for region in regions]
+    def draw(self, screen, screen_size):
+        screen.fill(colors.OCEAN_BLUE)
 
-        for cell in cells:
+        points = point_grid.get_fuzzy_grid(64, 64)
+        faces, edges, vertices = voronoi.get_voronoi(points, primitives=map_primitives.PRIMITIVES)
+
+        self.set_water(vertices)
+        self.set_border_ocean_tiles(faces)
+
+        for face in faces:
             pygame.draw.polygon(
-                screen, cell.color(),
-                [point.to_pygame(MAP_SCALE) for point in cell.region.points]
+                screen, face.elevation_color,
+                [point.to_pygame(screen_size) for point in face.vertices]
             )
         # for ridge in ridges:
         #   pygame.draw.line(
@@ -39,21 +38,19 @@ class Map:
         # for point in points:
         #   pygame.draw.circle(screen, DARK_BLUE, point.to_pygame(MAP_SCALE), 2)
 
+    def set_border_ocean_tiles(self, faces):
+        for face in faces:
+            if face.is_on_border():
+                face.is_ocean = True
 
-def color_in_range(start_color, end_color, percentage):
-    return tuple(
-        [int(start + (end - start) * percentage) for start, end in zip(start_color, end_color)]
-    )
+    def set_water(self, vertices):
+        for vertex in vertices:
+            vertex.set_water(self.noise_fn)
 
+    def normalize_elevation(self, vertices):
+        max_elevation = max(vertex.elevation for vertex in vertices)
+        min_elevation = min(vertex.elevation for vertex in vertices)
+        difference = max_elevation - min_elevation
 
-class Cell:
-    def __init__(self, region):
-        self.region = region
-        self.centre = region.centre()
-
-    def color(self):
-        if any(point.out_of_bounds() for point in self.region.points):
-            return OCEAN_BLUE
-
-        color = color_in_range(WHITE, BLACK, self.centre.distance_to_map_centre_normalized())
-        return color
+        for vertex in vertices:
+            vertex.elevation = (vertex.elevation - min_elevation) / difference

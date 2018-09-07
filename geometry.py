@@ -38,6 +38,9 @@ class Point:
     def __add__(self, other_point):
         return Point(self.x + other_point.x, self.y + other_point.y)
 
+    def __radd__(self, other):
+        return Point(self.x + other, self.y + other)
+
     def __sub__(self, other_point):
         return Point(self.x - other_point.x, self.y - other_point.y)
 
