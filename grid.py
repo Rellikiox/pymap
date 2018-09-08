@@ -21,10 +21,10 @@ class Face:
 
     def update_edges(self):
         all_edges = [edge for vertex in self.vertices for edge in vertex.edges]
-        self.edges = [
+        self.edges = list(set([
             edge for edge in all_edges
             if all_edges.count(edge) == 2
-        ]
+        ]))
 
     def update_edges_faces(self):
         for edge in self.edges:

@@ -5,6 +5,7 @@ import map_primitives
 import noise
 import point_grid
 import pygame.display
+import pygame.font
 import pygame.draw
 import pygame.transform
 import voronoi
@@ -16,7 +17,9 @@ class Map:
         print('Using seed:', seed)
         random.seed(seed)
         rand_z = random.random()
-        self.noise_fn = partial(noise.pnoise3, z=rand_z, octaves=5)
+
+        self.noise_fn = partial(noise.pnoise3, z=rand_z, octaves=8, lacunarity=8, repeatx=8, repeaty=8)
+        self.font = pygame.font.SysFont('Comic Sans MS', 30)
 
     def draw(self, screen, screen_size):
         screen.fill(colors.OCEAN_BLUE)
@@ -25,32 +28,28 @@ class Map:
         faces, edges, vertices = voronoi.get_voronoi(points, primitives=map_primitives.PRIMITIVES)
 
         self.set_water(vertices)
-        self.set_border_ocean_tiles(faces)
 
-        for face in faces:
+        base = random.randint(0, 1000)
+        for vertex in vertices:
+            vertex.set_new_factor(base)
+        # self.normalize_new_factor(vertices)
+
+        for idx, face in enumerate(faces):
+            color = colors.greyscale(sum(vertex.new_factor for vertex in face.vertices) / len(face.vertices))
+            color = face.elevation_color
             pygame.draw.polygon(
-                screen, face.elevation_color,
+                screen, color,
                 [point.to_pygame(screen_size) for point in face.vertices]
             )
-        # for ridge in ridges:
-        #   pygame.draw.line(
-        #       screen, DARK_GREY, ridge[0].to_pygame(MAP_SCALE), ridge[1].to_pygame(MAP_SCALE))
-        # for point in points:
-        #   pygame.draw.circle(screen, DARK_BLUE, point.to_pygame(MAP_SCALE), 2)
-
-    def set_border_ocean_tiles(self, faces):
-        for face in faces:
-            if face.is_on_border():
-                face.is_ocean = True
 
     def set_water(self, vertices):
         for vertex in vertices:
             vertex.set_water(self.noise_fn)
 
-    def normalize_elevation(self, vertices):
-        max_elevation = max(vertex.elevation for vertex in vertices)
-        min_elevation = min(vertex.elevation for vertex in vertices)
-        difference = max_elevation - min_elevation
+    def normalize_new_factor(self, vertices):
+        max_new_factor = max(vertex.new_factor for vertex in vertices)
+        min_new_factor = min(vertex.new_factor for vertex in vertices)
+        difference = max_new_factor - min_new_factor
 
         for vertex in vertices:
-            vertex.elevation = (vertex.elevation - min_elevation) / difference
+            vertex.new_factor = (vertex.new_factor - min_new_factor) / difference

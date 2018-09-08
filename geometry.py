@@ -31,18 +31,39 @@ class Point:
     def out_of_bounds(self):
         return self.x < 0 or self.x > 1 or self.y < 0 or self.y > 1
 
-    def distance_to_map_centre_normalized(self):
+    def distance_to_map_centre(self):
         vector_to_centre = Point(0.5, 0.5) - self
-        return vector_to_centre.magnitude() / 0.708
+        return vector_to_centre.magnitude()
 
-    def __add__(self, other_point):
-        return Point(self.x + other_point.x, self.y + other_point.y)
+    def distance_to_border(self):
+        centred_on_origin = (self - 0.5)
+        absolute = centred_on_origin.fabs()
+        distance_to_border = (0.5 - absolute)
+        return min(*distance_to_border.tuple())
+
+    def fabs(self):
+        return Point(math.fabs(self.x), math.fabs(self.y))
+
+    def __add__(self, other):
+        if isinstance(other, self.__class__):
+            return Point(self.x + other.x, self.y + other.y)
+        else:
+            return Point(self.x + other, self.y + other)
 
     def __radd__(self, other):
-        return Point(self.x + other, self.y + other)
+        return self + other
 
-    def __sub__(self, other_point):
-        return Point(self.x - other_point.x, self.y - other_point.y)
+    def __sub__(self, other):
+        if isinstance(other, self.__class__):
+            return Point(self.x - other.x, self.y - other.y)
+        else:
+            return Point(self.x - other, self.y - other)
+
+    def __rsub__(self, other):
+        if isinstance(other, self.__class__):
+            return Point(other.x - self.x, other.y - self.y)
+        else:
+            return Point(other - self.x, other - self.y)
 
     def __truediv__(self, value):
         return Point(self.x / value, self.y / value)

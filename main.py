@@ -5,6 +5,7 @@ import sys
 
 from map import Map
 import pygame.display
+import pygame.font
 import pygame.draw
 import pygame.transform
 import random
@@ -21,6 +22,7 @@ def main(seed):
 def setup_and_get_screen():
     # set SDL to use the dummy NULL video driver, so it doesn't need a windowing system.
     os.environ["SDL_VIDEODRIVER"] = "dummy"
+    pygame.font.init()
     pygame.display.init()
     screen = pygame.display.set_mode((MAP_SCALE, MAP_SCALE), 0, 32)
 
@@ -35,5 +37,5 @@ def save_image(screen):
 
 
 if __name__ == "__main__":
-    seed = sys.argv[1] if len(sys.argv) > 1 else random.randint(0, sys.maxsize)
+    seed = sys.argv[1] if len(sys.argv) > 1 else str(random.randint(0, sys.maxsize))
     main(seed)
