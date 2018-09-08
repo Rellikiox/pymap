@@ -7,6 +7,7 @@ import point_grid
 import pygame.display
 import pygame.font
 import pygame.draw
+import pygame.gfxdraw
 import pygame.transform
 import voronoi
 import random
@@ -19,23 +20,30 @@ class Map:
         random.seed(seed)
         base = random.randint(0, 1000)
         self.noise_fn = partial(noise.pnoise2, octaves=4, base=base)
-        self.font = pygame.font.SysFont('Comic Sans MS', 30)
+        self.font = pygame.font.SysFont('Comic Sans MS', 12)
 
     def draw(self, screen, screen_size):
         screen.fill(colors.OCEAN_BLUE)
 
-        points = point_grid.get_fuzzy_grid(64, 64)
+        points = point_grid.get_fuzzy_grid(32, 32)
         faces, edges, vertices = voronoi.get_voronoi(points, primitives=map_primitives.PRIMITIVES)
 
         self.set_water_levels(vertices)
+        self.reset_orphaned_water_vertices(vertices)
         self.set_ocean(faces)
         self.set_elevation(vertices)
         self.add_rivers(vertices)
 
         for face in faces:
-            pygame.draw.polygon(
-                screen, face.elevation_color,
-                [point.to_pygame(screen_size) for point in face.vertices]
+            pygame.gfxdraw.aapolygon(
+                screen,
+                [point.scaled(screen_size).tuple() for point in face.vertices],
+                face.elevation_color
+            )
+            pygame.gfxdraw.filled_polygon(
+                screen,
+                [point.scaled(screen_size).tuple() for point in face.vertices],
+                face.elevation_color
             )
 
         for edge in edges:
@@ -46,6 +54,15 @@ class Map:
                     edge.vertices[1].to_pygame(screen_size),
                     int(math.sqrt(edge.river_flow))
                 )
+
+        # for vertex in vertices:
+        #     if vertex.is_lake:
+        #         screen.blit(
+        #             self.font.render(str(round(vertex.elevation, 2)), False, colors.WHITE),
+        #             vertex.to_pygame(screen_size)
+        #         )
+
+        # print(len([vertex.elevation for vertex in vertices if vertex.is_lake]))
 
     def set_water_levels(self, vertices):
         for vertex in vertices:
@@ -70,6 +87,11 @@ class Map:
 
             visited_faces.add(face)
 
+    def reset_orphaned_water_vertices(self, vertices):
+        for vertex in vertices:
+            if vertex.is_water:
+                vertex.is_water = any(face.is_water for face in vertex.faces)
+
     def set_elevation(self, vertices):
         max_elevation = len(vertices)
         open_set = set()
@@ -83,7 +105,10 @@ class Map:
         while open_set:
             vertex = open_set.pop()
             for _vertex in vertex.vertices:
-                elevation = 0 if _vertex.is_ocean else vertex.elevation + 1
+                if vertex.is_lake and _vertex.is_lake:
+                    elevation = vertex.elevation
+                else:
+                    elevation = vertex.elevation + 1
 
                 if elevation < _vertex.elevation:
                     _vertex.elevation = elevation
