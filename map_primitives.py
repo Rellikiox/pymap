@@ -17,15 +17,19 @@ class MapFace(Face):
 
     @property
     def elevation_color(self):
-        return colors.OCEAN_BLUE if self.water else colors.MOUNTAIN_BROWN
+        if self.is_ocean:
+            return colors.DEEP_BLUE
+        if self.is_water:
+            return colors.RIVER_BLUE
+        return colors.color_in_range(colors.SAND, colors.MOUNTAIN_BROWN, self.elevation)
 
     @property
     def centre(self):
         return sum(self.vertices) / len(self.vertices)
 
     @property
-    def water(self):
-        return len([vertex for vertex in self.vertices if not vertex.water]) <= 1
+    def is_water(self):
+        return len([vertex for vertex in self.vertices if not vertex.is_water]) <= 1
 
     @property
     def factor(self):
@@ -38,37 +42,52 @@ class MapFace(Face):
     def is_on_border(self):
         return any(vertex.out_of_bounds() for vertex in self.vertices)
 
+    def set_ocean(self, is_ocean):
+        self.is_ocean = is_ocean
+        for vertex in self.vertices:
+            vertex.is_ocean = True
+
 
 class MapEdge(Edge):
-    pass
+    river_flow = 0
 
-import noise, math
 
 class MapVertex(Vertex):
     elevation = None
-
-    def set_water(self, noise_fn):
-        if self.distance_to_border() < 0.1:
-            self.factor = 0
-        else:
-            self.factor = (noise_fn(self.x, self.y) + 1) / 2
-            # Make edges less likely
-            distance = self.distance_to_map_centre()
-            if distance > 0.65:
-                self.factor = self.factor - 0.5
-            else:
-                self.factor = self.factor - math.sqrt(distance) * 0.3
+    river_flow = 0
+    is_ocean = False
 
     @property
-    def water(self):
-        return self.new_factor < 0.2
+    def is_water(self):
+        return self.water_chance < 0.2
 
-    def set_new_factor(self, base):
-        self.new_factor = math.fabs(noise.pnoise2(self.x * 3, self.y * 3, octaves=4, base=base))
+    def set_water_chance(self, noise_fn):
+        self.water_chance = math.fabs(noise_fn(self.x * 3, self.y * 3))
         if self.distance_to_border() < 0.05:
-            self.new_factor = max(self.new_factor - 0.5, 0)
-        self.new_factor = self.new_factor + (0.7 - math.sqrt(self.distance_to_map_centre()))
-        # self.new_factor = max(min(self.new_factor * (2 - distance_to_map_centre_factor), 1), 0)
+            self.water_chance = max(self.water_chance - 0.5, 0)
+        self.water_chance += (0.7 - math.sqrt(self.distance_to_map_centre())) * 0.5
+
+    def make_river(self, river_flow=1):
+        self.river_flow = river_flow
+        downstream_edge, downstream_vertex = self.get_downstream_edge()
+        if not downstream_edge:
+            return
+        downstream_edge.river_flow = river_flow
+        if not downstream_vertex.is_ocean:
+            downstream_vertex.make_river(river_flow + 1)
+
+    def get_downstream_edge(self):
+        min_elevation = self.elevation
+        min_edge = None
+        min_vertex = None
+        for edge in self.edges:
+            other_vertex = edge.other_vertex(self)
+            if other_vertex.elevation < min_elevation:
+                min_edge = edge
+                min_vertex = other_vertex
+        if min_edge is None and self.elevation != 0:
+            import pdb; pdb.set_trace()
+        return min_edge, min_vertex
 
 
 PRIMITIVES = {

@@ -63,6 +63,12 @@ class Edge:
         for face in self.faces:
             face.faces.extend([_face for _face in self.faces if _face != face])
 
+    def other_vertex(self, vertex):
+        if self.vertices[0] == vertex:
+            return self.vertices[1]
+        if self.vertices[1] == vertex:
+            return self.vertices[0]
+
 
 class Vertex(Point):
     # The faces this vertex is part of
