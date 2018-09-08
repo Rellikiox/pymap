@@ -21,6 +21,10 @@ class MapFace(Face):
             return colors.DEEP_BLUE
         if self.is_water:
             return colors.RIVER_BLUE
+        if self.moisture:
+            return colors.color_in_range(
+                colors.WHITE, colors.FOREST_GREEN, self.moisture
+            )
         return colors.color_in_range(colors.SAND, colors.MOUNTAIN_BROWN, self.elevation)
 
     @property
@@ -32,8 +36,8 @@ class MapFace(Face):
         return len([vertex for vertex in self.vertices if not vertex.is_water]) < 1
 
     @property
-    def factor(self):
-        return sum(vertex.factor for vertex in self.vertices) / len(self.vertices)
+    def moisture(self):
+        return sum(vertex.moisture for vertex in self.vertices) / len(self.vertices)
 
     @property
     def elevation(self):
@@ -51,15 +55,41 @@ class MapFace(Face):
 class MapEdge(Edge):
     river_flow = 0
 
+    def as_rectangle(self, width, scale):
+        p0 = self.vertices[0] * scale
+        p1 = self.vertices[1] * scale
+
+        dx = p1.x - p0.x  # delta x
+        dy = p1.y - p0.y  # delta y
+        linelength = math.sqrt(dx * dx + dy * dy)
+        dx /= linelength
+        dy /= linelength
+        # Ok, (dx, dy) is now a unit vector pointing in the direction of the line
+        # A perpendicular vector is given by (-dy, dx)
+        px = 0.5 * width * (-dy)  # perpendicular vector with lenght thickness * 0.5
+        py = 0.5 * width * dx
+
+        return [
+            (p0.x + px, p0.y + py),
+            (p1.x + px, p1.y + py),
+            (p1.x - px, p1.y - py),
+            (p0.x - px, p0.y - py),
+        ]
+
 
 class MapVertex(Vertex):
     elevation = None
+    moisture = 0
     river_flow = 0
     is_ocean = False
 
     @property
     def is_lake(self):
         return self.is_water and not self.is_ocean
+
+    @property
+    def is_coast(self):
+        return any(vertex.is_ocean for vertex in self.vertices)
 
     def set_water_chance(self, noise_fn):
         water_chance = math.fabs(noise_fn(self.x * 3, self.y * 3))

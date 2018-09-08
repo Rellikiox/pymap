@@ -1,4 +1,5 @@
 
+from operator import attrgetter
 from functools import partial
 import colors
 import map_primitives
@@ -32,15 +33,13 @@ class Map:
         self.reset_orphaned_water_vertices(vertices)
         self.set_ocean(faces)
         self.set_elevation(vertices)
+        self.redistribute_elevation(vertices)
         self.add_rivers(vertices)
+        self.set_moisture(vertices)
+        self.redistribute_moisture(vertices)
 
         for face in faces:
-            pygame.gfxdraw.aapolygon(
-                screen,
-                [point.scaled(screen_size).tuple() for point in face.vertices],
-                face.elevation_color
-            )
-            pygame.gfxdraw.filled_polygon(
+            draw_filled_aa_polygon(
                 screen,
                 [point.scaled(screen_size).tuple() for point in face.vertices],
                 face.elevation_color
@@ -48,11 +47,10 @@ class Map:
 
         for edge in edges:
             if edge.river_flow:
-                pygame.draw.line(
-                    screen, colors.RIVER_BLUE,
-                    edge.vertices[0].to_pygame(screen_size),
-                    edge.vertices[1].to_pygame(screen_size),
-                    int(math.sqrt(edge.river_flow))
+                draw_filled_aa_polygon(
+                    screen,
+                    edge.as_rectangle(math.sqrt(edge.river_flow), screen_size),
+                    colors.RIVER_BLUE
                 )
 
         # for vertex in vertices:
@@ -124,8 +122,49 @@ class Map:
         mountain_vertices = [vertex for vertex in vertices if vertex.elevation > 0.6]
         vertices_with_rivers = random.sample(
             mountain_vertices,
-            int(math.sqrt(len(mountain_vertices))) * 2
+            int(math.sqrt(len(mountain_vertices)) * 1.5)
         )
 
         for vertex in vertices_with_rivers:
             vertex.make_river()
+
+    def redistribute_elevation(self, vertices):
+        land_vertices = [vertex for vertex in vertices if not vertex.is_water]
+        sorted_by_elevation = sorted(land_vertices, key=attrgetter('elevation'))
+        scale = 1.1
+
+        for idx, vertex in enumerate(sorted_by_elevation):
+            relative_position = idx / (len(sorted_by_elevation) - 1)
+            vertex.elevation = math.sqrt(scale) - math.sqrt(scale * (1 - relative_position))
+
+    def set_moisture(self, vertices):
+        moist_vertices = set()
+        for vertex in vertices:
+            if vertex.is_lake or vertex.river_flow:
+                vertex.moisture = min(3, vertex.river_flow * 0.2) if vertex.river_flow else 1
+                moist_vertices.add(vertex)
+            else:
+                vertex.moisture = 0
+
+        while moist_vertices:
+            vertex = moist_vertices.pop()
+            for _vertex in vertex.vertices:
+                new_moisture = vertex.moisture * 0.85
+                if new_moisture > _vertex.moisture:
+                    _vertex.moisture = new_moisture
+                    moist_vertices.add(_vertex)
+
+        for vertex in vertices:
+            if vertex.is_ocean or vertex.is_coast:
+                vertex.moisture = 1
+
+    def redistribute_moisture(self, vertices):
+        sorted_by_moisture = sorted(vertices, key=attrgetter('moisture'))
+
+        for idx, vertex in enumerate(sorted_by_moisture):
+            vertex.moisture = idx / (len(sorted_by_moisture) - 1)
+
+
+def draw_filled_aa_polygon(screen, points, color):
+    pygame.gfxdraw.aapolygon(screen, points, color)
+    pygame.gfxdraw.filled_polygon(screen, points, color)
