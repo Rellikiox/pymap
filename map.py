@@ -26,7 +26,7 @@ class Map:
     def draw(self, screen, screen_size):
         screen.fill(colors.OCEAN_BLUE)
 
-        points = point_grid.get_fuzzy_grid(32, 32)
+        points = point_grid.get_fuzzy_grid(64, 64)
         faces, edges, vertices = voronoi.get_voronoi(points, primitives=map_primitives.PRIMITIVES)
 
         self.set_water_levels(vertices)
@@ -45,13 +45,29 @@ class Map:
                 face.elevation_color
             )
 
+        # for edge in edges:
+        #     if not edge.is_ocean and not edge.river_flow and not edge.is_boundary:
+        #         draw_filled_aa_polygon(
+        #             screen,
+        #             edge.as_rectangle(0.25, screen_size),
+        #             edge.inner_boundary_color
+        #         )
+
         for edge in edges:
-            if edge.river_flow:
+            if not edge.is_ocean and not edge.river_flow and edge.is_boundary:
                 draw_filled_aa_polygon(
                     screen,
-                    edge.as_rectangle(math.sqrt(edge.river_flow), screen_size),
-                    colors.RIVER_BLUE
+                    edge.as_rectangle(2, screen_size),
+                    edge.outter_boundary_color
                 )
+
+        # for edge in edges:
+        #     if edge.river_flow:
+        #         draw_filled_aa_polygon(
+        #             screen,
+        #             edge.as_rectangle(min(3, math.sqrt(edge.river_flow)), screen_size),
+        #             colors.RIVER_BLUE
+        #         )
 
         # for vertex in vertices:
         #     if vertex.is_lake:

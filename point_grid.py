@@ -12,7 +12,7 @@ def get_grid(width, height):
 
 
 def get_fuzzy_grid(width, height):
-    max_random_offset = 0.6
+    max_random_offset = 0.4
     max_x_random_offset = max_random_offset / (width - 1)
     max_y_random_offset = max_random_offset / (height - 1)
 

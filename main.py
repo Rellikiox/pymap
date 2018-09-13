@@ -13,7 +13,8 @@ import random
 MAP_SCALE = 900
 
 
-def main(seed):
+def create_map(seed=None):
+    seed = seed if seed is not None else str(random.randint(0, sys.maxsize))
     screen = setup_and_get_screen()
     Map(seed).draw(screen, MAP_SCALE)
     save_image(screen)
@@ -34,8 +35,10 @@ def save_image(screen):
     timestamp = datetime.datetime.now().strftime('%Y.%m.%dT%H.%M.%S')
     filename = 'screenshots/{}.png'.format(timestamp)
     pygame.image.save(screen, filename)
+    filename = 'latest_screenshot.png'
+    pygame.image.save(screen, filename)
 
 
 if __name__ == "__main__":
-    seed = sys.argv[1] if len(sys.argv) > 1 else str(random.randint(0, sys.maxsize))
-    main(seed)
+    seed = sys.argv[1] if len(sys.argv) > 1 else None
+    create_map(seed)

@@ -1,4 +1,5 @@
 
+from operator import attrgetter
 from grid import Face, Edge, Vertex
 import colors
 import math
@@ -21,11 +22,9 @@ class MapFace(Face):
             return colors.DEEP_BLUE
         if self.is_water:
             return colors.RIVER_BLUE
-        if self.moisture:
-            return colors.color_in_range(
-                colors.WHITE, colors.FOREST_GREEN, self.moisture
-            )
-        return colors.color_in_range(colors.SAND, colors.MOUNTAIN_BROWN, self.elevation)
+        if self.is_coast:
+            return colors.SAND
+        return self.biome.color
 
     @property
     def centre(self):
@@ -36,12 +35,24 @@ class MapFace(Face):
         return len([vertex for vertex in self.vertices if not vertex.is_water]) < 1
 
     @property
+    def is_lake(self):
+        return self.is_water and not self.is_ocean
+
+    @property
+    def is_coast(self):
+        return len([vertex for vertex in self.vertices if vertex.is_coast]) > len(self.vertices) * 0.7
+
+    @property
     def moisture(self):
         return sum(vertex.moisture for vertex in self.vertices) / len(self.vertices)
 
     @property
     def elevation(self):
         return sum(vertex.elevation for vertex in self.vertices) / len(self.vertices)
+
+    @property
+    def biome(self):
+        return Biome(self)
 
     def is_on_border(self):
         return any(vertex.out_of_bounds() for vertex in self.vertices)
@@ -55,25 +66,44 @@ class MapFace(Face):
 class MapEdge(Edge):
     river_flow = 0
 
+    @property
+    def is_ocean(self):
+        return all(vertex.is_ocean for vertex in self.vertices)
+
+    @property
+    def is_boundary(self):
+        if len(self.faces) == 1:
+            return False
+        return self.faces[0].biome.biome_type != self.faces[1].biome.biome_type
+
+    @property
+    def outter_boundary_color(self):
+        dominant_color = sorted(
+            self.faces, key=attrgetter('elevation'), reverse=True
+        )[0].biome.color
+        return colors.color_in_range(dominant_color, colors.BLACK, 0.25)
+
+    @property
+    def inner_boundary_color(self):
+        return colors.color_in_range(self.faces[0].biome.color, colors.WHITE, 0.25)
+
     def as_rectangle(self, width, scale):
         p0 = self.vertices[0] * scale
         p1 = self.vertices[1] * scale
 
-        dx = p1.x - p0.x  # delta x
-        dy = p1.y - p0.y  # delta y
-        linelength = math.sqrt(dx * dx + dy * dy)
-        dx /= linelength
-        dy /= linelength
-        # Ok, (dx, dy) is now a unit vector pointing in the direction of the line
-        # A perpendicular vector is given by (-dy, dx)
-        px = 0.5 * width * (-dy)  # perpendicular vector with lenght thickness * 0.5
+        dx = p1.x - p0.x
+        dy = p1.y - p0.y
+        line_length = math.sqrt(dx * dx + dy * dy)
+        dx /= line_length
+        dy /= line_length
+        px = 0.5 * width * (-dy)
         py = 0.5 * width * dx
 
         return [
             (p0.x + px, p0.y + py),
             (p1.x + px, p1.y + py),
             (p1.x - px, p1.y - py),
-            (p0.x - px, p0.y - py),
+            (p0.x - px, p0.y - py)
         ]
 
 
@@ -147,6 +177,44 @@ class MapVertex(Vertex):
                 min_edge, min_vertex = edge, vertex
 
         return min_edge, min_vertex
+
+
+class Biome:
+    BIOME_MAP = [
+        ['desert', 'grassland', 'forest'],
+        ['temperate_desert', 'grassland', 'deep_forest'],
+        ['bare', 'tundra', 'snow']
+    ]
+    BIOME_COLOR_MAP = {
+        'bare': colors.BARE_GREY,
+        'deep_forest': colors.DEEP_FOREST_GREEN,
+        'desert': colors.DESERT_BROWN,
+        'forest': colors.FOREST_GREEN,
+        'grassland': colors.GRASS_GREEN,
+        'snow': colors.SNOW_WHITE,
+        'temperate_desert': colors.TEMPERATE_DESERT_GREEN,
+        'tundra': colors.TUNDRA_BEIGE,
+        'beach': colors.SAND,
+        'lake': colors.RIVER_BLUE
+    }
+
+    @classmethod
+    def get_biome(cls, elevation, moisture):
+        elevation_idx = min(int(elevation * 3), 2)
+        moisture_idx = min(int(moisture * 3), 2)
+        return cls.BIOME_MAP[elevation_idx][moisture_idx]
+
+    def __init__(self, face):
+        if face.is_coast:
+            self.biome_type = 'beach'
+        elif face.is_lake:
+            self.biome_type = 'lake'
+        else:
+            self.biome_type = self.get_biome(face.elevation, face.moisture)
+
+    @property
+    def color(self):
+        return self.BIOME_COLOR_MAP[self.biome_type]
 
 
 PRIMITIVES = {
