@@ -16,15 +16,15 @@ import math
 
 
 class Map:
-    def __init__(self, seed):
+    def __init__(self, width, seed):
+        self.width = width
         print('Using seed:', seed)
         random.seed(seed)
         base = random.randint(0, 1000)
         self.noise_fn = partial(noise.pnoise2, octaves=4, base=base)
-        self.font = pygame.font.SysFont('Comic Sans MS', 12)
 
     def create(self):
-        points = point_grid.get_fuzzy_grid(64, 64)
+        points = point_grid.get_fuzzy_grid(self.width, self.width)
         faces, edges, vertices = voronoi.get_voronoi(points, primitives=map_primitives.PRIMITIVES)
 
         self.set_water_levels(vertices)
@@ -40,13 +40,14 @@ class Map:
         self.edges = edges
         self.vertices = vertices
 
-    def draw(self, screen, screen_size, draw_mode='map'):
+    def draw(self, screen, screen_size, font, draw_mode='map'):
         if draw_mode == 'noise':
             pixels = {}
             base = random.randint(0, screen_size)
             scale = 3 / screen_size
             for y in range(screen_size):
                 for x in range(screen_size):
+
                     # pixels[(x, y)] = noise.pnoise2(x * scale, y * scale, base=base, octaves=4)
                     pixels[(x, y)] = noise.pnoise2(x * scale, y * scale, base=base)
                     pixels[(x, y)] += 0.5 * noise.pnoise2(x * scale * 2, y * scale * 2, base=base)
@@ -105,7 +106,7 @@ class Map:
         # for vertex in self.vertices:
         #     if vertex.is_lake:
         #         screen.blit(
-        #             self.font.render(str(round(vertex.elevation, 2)), False, colors.WHITE),
+        #             font.render(str(round(vertex.elevation, 2)), False, colors.WHITE),
         #             vertex.to_pygame(screen_size)
         #         )
 
@@ -212,6 +213,14 @@ class Map:
 
         for idx, vertex in enumerate(sorted_by_moisture):
             vertex.moisture = idx / (len(sorted_by_moisture) - 1)
+
+    def to_dict(self):
+        return {
+            'points': {
+                id(vertex): vertex.to_dict()
+                for vertex in self.vertices
+            }
+        }
 
 
 def draw_filled_aa_polygon(screen, points, color):

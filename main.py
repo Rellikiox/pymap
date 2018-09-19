@@ -16,9 +16,10 @@ MAP_SCALE = 900
 def create_map(seed=None, draw_mode='map'):
     seed = seed if seed is not None else str(random.randint(0, sys.maxsize))
     screen = setup_and_get_screen()
-    map = Map(seed)
+    map = Map(MAP_SCALE, seed)
     map.create()
-    map.draw(screen, MAP_SCALE, draw_mode)
+    font = pygame.font.SysFont('Comic Sans MS', 12)
+    map.draw(screen, MAP_SCALE, font, draw_mode)
     save_image(screen)
 
 

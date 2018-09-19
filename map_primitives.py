@@ -174,6 +174,18 @@ class MapVertex(Vertex):
 
         return min_edge, min_vertex
 
+    def to_dict(self):
+        return {
+            'elevation': round(self.elevation, 2),
+            'moisture': round(self.moisture, 2),
+            'river_flow': self.river_flow,
+            'is_ocean': self.is_ocean,
+            'is_lake': self.is_lake,
+            'is_coast': self.is_coast,
+            'x': self.x,
+            'y': self.y,
+        }
+
 
 class Biome:
     BIOME_MAP = [
