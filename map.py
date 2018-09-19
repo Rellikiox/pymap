@@ -23,9 +23,7 @@ class Map:
         self.noise_fn = partial(noise.pnoise2, octaves=4, base=base)
         self.font = pygame.font.SysFont('Comic Sans MS', 12)
 
-    def draw(self, screen, screen_size):
-        screen.fill(colors.OCEAN_BLUE)
-
+    def create(self):
         points = point_grid.get_fuzzy_grid(64, 64)
         faces, edges, vertices = voronoi.get_voronoi(points, primitives=map_primitives.PRIMITIVES)
 
@@ -38,14 +36,49 @@ class Map:
         self.set_moisture(vertices)
         self.redistribute_moisture(vertices)
 
-        for face in faces:
+        self.faces = faces
+        self.edges = edges
+        self.vertices = vertices
+
+    def draw(self, screen, screen_size, draw_mode='map'):
+        if draw_mode == 'noise':
+            pixels = {}
+            base = random.randint(0, screen_size)
+            scale = 3 / screen_size
+            for y in range(screen_size):
+                for x in range(screen_size):
+                    # pixels[(x, y)] = noise.pnoise2(x * scale, y * scale, base=base, octaves=4)
+                    pixels[(x, y)] = noise.pnoise2(x * scale, y * scale, base=base)
+                    pixels[(x, y)] += 0.5 * noise.pnoise2(x * scale * 2, y * scale * 2, base=base)
+                    pixels[(x, y)] += 0.25 * noise.pnoise2(x * scale * 4, y * scale * 4, base=base)
+                    pixels[(x, y)] += 0.125 * noise.pnoise2(x * scale * 8, y * scale * 8, base=base)
+
+            max_pixel = max(value for value in pixels.values())
+            min_pixel = min(value for value in pixels.values())
+            print(min_pixel, max_pixel)
+            pixel_diff = max_pixel - min_pixel
+
+            for pixel, pixel_value in pixels.items():
+                pixel_value = ((pixel_value - min_pixel) / pixel_diff)
+                if pixel_value < 0.34:
+                    color = (pixel_value * 255, 0, 0)
+                elif pixel_value < 0.67:
+                    color = (0, pixel_value * 255, 0)
+                else:
+                    color = (0, 0, pixel_value * 255)
+
+                screen.set_at(pixel, color)
+                # screen.set_at(pixel, colors.greyscale(pixel_value + 0.5))
+            return
+
+        for face in self.faces:
             draw_filled_aa_polygon(
                 screen,
                 [point.scaled(screen_size).tuple() for point in face.vertices],
                 face.elevation_color
             )
 
-        # for edge in edges:
+        # for edge in self.edges:
         #     if not edge.is_ocean and not edge.river_flow and not edge.is_boundary:
         #         draw_filled_aa_polygon(
         #             screen,
@@ -53,7 +86,7 @@ class Map:
         #             edge.inner_boundary_color
         #         )
 
-        for edge in edges:
+        for edge in self.edges:
             if not edge.is_ocean and not edge.river_flow and edge.is_boundary:
                 draw_filled_aa_polygon(
                     screen,
@@ -61,15 +94,15 @@ class Map:
                     edge.outter_boundary_color
                 )
 
-        # for edge in edges:
-        #     if edge.river_flow:
-        #         draw_filled_aa_polygon(
-        #             screen,
-        #             edge.as_rectangle(min(3, math.sqrt(edge.river_flow)), screen_size),
-        #             colors.RIVER_BLUE
-        #         )
+        for edge in self.edges:
+            if edge.river_flow:
+                draw_filled_aa_polygon(
+                    screen,
+                    edge.as_rectangle(min(3, math.sqrt(edge.river_flow)), screen_size),
+                    colors.RIVER_BLUE
+                )
 
-        # for vertex in vertices:
+        # for vertex in self.vertices:
         #     if vertex.is_lake:
         #         screen.blit(
         #             self.font.render(str(round(vertex.elevation, 2)), False, colors.WHITE),

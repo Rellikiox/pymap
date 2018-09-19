@@ -20,10 +20,6 @@ class MapFace(Face):
     def elevation_color(self):
         if self.is_ocean:
             return colors.DEEP_BLUE
-        if self.is_water:
-            return colors.RIVER_BLUE
-        if self.is_coast:
-            return colors.SAND
         return self.biome.color
 
     @property
@@ -79,7 +75,7 @@ class MapEdge(Edge):
     @property
     def outter_boundary_color(self):
         dominant_color = sorted(
-            self.faces, key=attrgetter('elevation'), reverse=True
+            self.faces, key=attrgetter('biome.draw_order')
         )[0].biome.color
         return colors.color_in_range(dominant_color, colors.BLACK, 0.25)
 
@@ -197,6 +193,10 @@ class Biome:
         'beach': colors.SAND,
         'lake': colors.RIVER_BLUE
     }
+    BIOME_DRAW_PREFERENCE = [
+        'lake', 'snow', 'tundra', 'bare', 'deep_forest', 'grassland',
+        'temperate_desert', 'forest', 'grassland', 'desert', 'beach'
+    ]
 
     @classmethod
     def get_biome(cls, elevation, moisture):
@@ -205,9 +205,7 @@ class Biome:
         return cls.BIOME_MAP[elevation_idx][moisture_idx]
 
     def __init__(self, face):
-        if face.is_coast:
-            self.biome_type = 'beach'
-        elif face.is_lake:
+        if face.is_lake:
             self.biome_type = 'lake'
         else:
             self.biome_type = self.get_biome(face.elevation, face.moisture)
@@ -215,6 +213,10 @@ class Biome:
     @property
     def color(self):
         return self.BIOME_COLOR_MAP[self.biome_type]
+
+    @property
+    def draw_order(self):
+        return self.BIOME_DRAW_PREFERENCE.index(self.biome_type)
 
 
 PRIMITIVES = {

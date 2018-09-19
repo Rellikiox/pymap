@@ -1,29 +1,16 @@
 
-from http.server import SimpleHTTPRequestHandler
+from flask import Flask
+from flask import request
 from main import create_map
-import socketserver
+import time
+
+app = Flask(__name__)
 
 
-class RequestHandler(SimpleHTTPRequestHandler):
-    def do_GET(self):
-        if self.path != '/':
-            return super().do_GET()
+@app.route('/')
+def homepage():
+    seed = request.args.get('seed', None)
+    draw_mode = request.args.get('draw_mode', 'map')
+    create_map(seed=seed, draw_mode=draw_mode)
 
-        self.send_response(200)
-        self.send_header('Content-Type', 'text/html')
-        self.end_headers()
-
-        create_map()
-
-        self.wfile.write(bytes('<img src="latest_screenshot.png">', 'utf8'))
-
-
-def run():
-    port = 8000
-    with socketserver.TCPServer(('', port), RequestHandler) as httpd:
-        print('Serving at port', port)
-        httpd.serve_forever()
-
-
-if __name__ == '__main__':
-    run()
+    return '<img src="static/latest_screenshot.png?{}">'.format(time.time())
